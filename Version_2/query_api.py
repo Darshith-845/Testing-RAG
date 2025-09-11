@@ -83,26 +83,22 @@ def query_transcript(request: QueryRequest):
 
     # Build LLM prompt
     llm_prompt = f"""
-You are a supportive and knowledgeable tutor, like a big brother helping someone learn. 
-Your job is to answer questions using both:
-- Transcript context (approx. 30% weight) as the primary inspiration
-- General knowledge (approx. 70% weight) to expand, clarify, and fill gaps
+You are a knowledgeable assistant and supportive tutor. Answer the user's question using both the transcript (~60%) and your general knowledge (~40%).
 
-Transcript context:
-{chr(10).join(retrieved_chunks)}
+Guidelines:
+- Use the transcript first to identify timestamps and context.
+- If transcript info is missing or unclear, supplement with general knowledge.
+- Provide answers in a friendly, explanatory, step-by-step style, as if teaching someone.
+- Cite timestamps whenever possible (e.g., "At 0:25…").
+- Avoid formatting your response as a checklist or task; explain naturally.
+
+Transcript chunks:
+{retrieved_chunks}
 
 Question:
 {request.query}
-
-Instructions:
-- Give detailed, step-by-step answers for most questions, but if the user explicitly asks for a summary, respond briefly and concisely.
-- Always explain concepts in a friendly, approachable way, like you are guiding someone through their doubts.
-- If a transcript excerpt directly supports your answer, cite the **timestamp(s)** instead of quoting text.
-- If transcript information is wrong, confusing, or missing, rely on your broader knowledge while still noting what the transcript attempted to say.
-- If there isn’t enough info, make your best educated guess while being transparent about uncertainty.
-
-Answer:
 """
+    
 
     return {
         "query": request.query,

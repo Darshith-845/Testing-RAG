@@ -1,6 +1,7 @@
 import re
 import uuid
 from typing import List, Dict
+import html
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
@@ -25,14 +26,19 @@ embedder = SentenceTransformer(EMBEDDING_MODEL)
 # -------------------------
 # Utils
 # -------------------------
+
+STOP_PHRASES = [
+        "subscribe", "like button", "thanks for watching",
+        "welcome to", "be sure to", "future updates", "like", "subscribe", "share", 
+        "follow", "click", "button"
+    ]
+
 def clean_text(text: str) -> str:
     """
     Remove filler words/phrases like 'subscribe', 'like', 'welcome to'.
     """
-    STOP_PHRASES = [
-        "subscribe", "like button", "thanks for watching",
-        "welcome to", "be sure to", "future updates"
-    ]
+    text = html.unescape(text) 
+    
     for phrase in STOP_PHRASES:
         text = re.sub(rf"\b{phrase}\b", "", text, flags=re.IGNORECASE)
     return text.strip()
@@ -67,6 +73,19 @@ def parse_transcript_txt(path: str) -> List[Dict]:
     transcript[-1]["end"] = transcript[-1]["start"] + 5
     return transcript
 
+def normalize_text(text: str) -> str:
+    """
+    Normalize transcript text for embedding:
+    - Lowercase
+    - Remove unwanted characters
+    - Remove stopwords
+    """
+    text = text.lower()  # lowercase
+    text = re.sub(r"[^a-z0-9\s]", "", text)  # remove punctuation
+    # remove filler words
+    words = text.split()
+    words = [w for w in words if w not in STOP_PHRASES]
+    return " ".join(words)
 
 def create_chunks(transcript: List[Dict]) -> List[Dict]:
     """
@@ -76,7 +95,7 @@ def create_chunks(transcript: List[Dict]) -> List[Dict]:
     i = 0
     while i < len(transcript):
         chunk_lines = transcript[i:i + WINDOW_SIZE]
-        chunk_text = " ".join([line["text"] for line in chunk_lines])
+        chunk_text = " ".join([normalize_text(line["text"]) for line in chunk_lines])
         chunk_start = chunk_lines[0]["start"]
         chunk_end = chunk_lines[-1]["end"]
         chunks.append({
